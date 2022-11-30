@@ -1,0 +1,33 @@
+# 忽略构建目录
+/build/
+/dist/
+/git/  # 如果是自定义目录而非 Git 仓库
+
+# Python 编译文件和缓存
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# 虚拟环境
+venv/
+env/
+*.venv
+
+# 系统文件
+.DS_Store  # macOS
+Thumbs.db  # Windows
+desktop.ini
+
+# PyInstaller 生成的临时文件（如果 .spec 文件是自动生成的，可取消注释）
+# *.spec
+
+# 本地配置文件
+.env
+.env.local
+
+# 日志和测试报告
+*.log
+.coverage
+htmlcov/
