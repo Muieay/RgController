@@ -17,7 +17,7 @@ def resource_path(relative_path):
 
 # -------------------- 常量定义 --------------------
 EXE_PATH = r"C:\Program Files (x86)\RG-CloudManagerRemote\CMLauncher.exe"
-EXE_NAME = "CMLauncher.exe"
+EXE_NAME = ["CMLauncher.exe"]
 WINDOW_TITLE = "小灰灰控制器"
 WINDOW_GEOMETRY = "350x150"
 ICON_PATH = resource_path("htl.ico")
@@ -101,16 +101,19 @@ class TrayIcon:
         # 名称配置
         tk.Label(config_win, text="进程名称:").grid(row=1, column=0, padx=5, pady=5)
         name_entry = tk.Entry(config_win, width=40)
-        name_entry.insert(0, EXE_NAME)
+        name_entry.insert(0, ", ".join(EXE_NAME))
         name_entry.grid(row=1, column=1, padx=5, pady=5)
 
         def save_config():
             """保存配置到全局变量"""
             global EXE_PATH, EXE_NAME
             EXE_PATH = path_entry.get()
-            EXE_NAME = name_entry.get()
+            # 从输入框获取字符串并转换为列表
+            names_str = name_entry.get()
+            EXE_NAME = [name.strip() for name in names_str.split(",") if name.strip()]
             config_win.destroy()
-            messagebox.showinfo("保存成功", "配置已更新！\n新路径: {}\n新名称: {}".format(EXE_PATH, EXE_NAME))
+            messagebox.showinfo("保存成功", 
+                "配置已更新！\n新路径: {}\n新名称: {}".format(EXE_PATH, ", ".join(EXE_NAME)))
 
         # 操作按钮
         btn_frame = tk.Frame(config_win)
@@ -233,43 +236,14 @@ def unset_window_topmost(root_window: tk.Tk) -> None:
     except Exception as e:
         messagebox.showerror("错误", f"取消置顶失败: {str(e)}")
     root_window.deiconify()
-# 已经弃用
-# def terminate_process_tree(process_name: str) -> None:
-#     """
-#     强制终止指定名称的进程及其子进程
-    
-#     Args:
-#         process_name: 需要终止的进程名称
         
-#     Returns:
-#         None (通过状态标签显示操作结果)
-#     """
-#     found = False
-#     for proc in psutil.process_iter(['name', 'pid']):
-#         try:
-#             if proc.info['name'] == process_name:
-#                 parent = psutil.Process(proc.info['pid'])
-#                 # 终止子进程
-#                 for child in parent.children(recursive=True):
-#                     child.kill()
-#                 # 终止父进程
-#                 parent.kill()
-#                 found = True
-#         except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess) as e:
-#             print(f"进程操作异常: {str(e)}")
-#             continue
-    
-#     if found:
-#         update_status("状态：云控解除", STATUS_COLOR["success"])
-#     else:
-#         update_status("状态：未找到进程", STATUS_COLOR["error"])
-        
- 
+
 # 改进版进程终止函数（支持父子服务依赖关系）
-def terminate_process_tree(process_name: str) -> None:
+def terminate_process_tree(process_names: list[str]) -> None:
     """
     改进版进程终止函数（支持父子服务依赖关系）
     终止顺序：孙进程 → 子进程 → 父进程
+    :param process_names: 需要终止的进程名称列表
     """
     found = False
     
@@ -290,16 +264,16 @@ def terminate_process_tree(process_name: str) -> None:
 
     for proc in psutil.process_iter(['name', 'pid']):
         try:
-            if proc.info['name'] == process_name:
-                parent = psutil.Process(proc.info['pid'])
+            if proc.info['name'] in process_names:
+                target_process = psutil.Process(proc.info['pid'])  # 重命名变量更准确
                 
                 # 先递归终止所有子进程
-                recursive_kill(parent)
+                recursive_kill(target_process)
                 
-                # 最后终止父进程
+                # 最后终止目标进程
                 try:
-                    parent.kill()
-                    parent.wait(timeout=3)  # 等待父进程终止
+                    target_process.kill()
+                    target_process.wait(timeout=3)  # 等待进程终止
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
                 
