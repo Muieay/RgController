@@ -1,42 +1,14 @@
 import tkinter as tk
 from tkinter import messagebox
 import psutil
+from utils import *
 import subprocess
 import UnloadTopKey
 import pystray
-import sys
-import os
 from PIL import Image, ImageTk
 import threading
-
-def resource_path(relative_path):
-    """ 获取资源绝对路径 """
-    if hasattr(sys, '_MEIPASS'):
-        return os.path.join(sys._MEIPASS, relative_path)
-    return os.path.join(os.path.abspath("."), relative_path)
-
-# -------------------- 常量定义 --------------------
-EXE_PATH = r"C:\Program Files (x86)\RG-CloudManagerRemote\CMLauncher.exe"
-EXE_NAME = ["CMLauncher.exe"]
-WINDOW_TITLE = "小灰灰控制器"
-WINDOW_GEOMETRY = "350x150"
-ICON_PATH = resource_path("htl.ico")
-QR_CODE_PATH = resource_path("qrcode.bmp")
-STATUS_COLOR = {
-    "success": "green",
-    "error": "red",
-    "default": "black"
-}
-ABOUT_TEXT = """功能说明：
-✅ ‌窗口置顶解除‌破解强控制类软件的霸屏行为，恢复窗口正常层级
-✅ ‌顽固进程终止‌，强制结束任务管理器无法关闭的进程
-
-本项目仅供学习参考，请勿用于非法用途。
-
-开源地址:
-https://github.com/muieay/RgController
-扫码关注微信公众号：
-"""
+import time
+from ProcessMax import show_max_processes
 
 
 # -------------------- 系统托盘类 --------------------
@@ -45,8 +17,8 @@ class TrayIcon:
         self.root = root_window
         self.tray_icon = None
         self.menu_items = (
-            pystray.MenuItem("显示窗口", self.show_window),
-            pystray.MenuItem("隐藏窗口", self.hide_window),
+            pystray.MenuItem("显示窗口", lambda: set_window_topmost(self.root)),
+            # pystray.MenuItem("隐藏窗口", self.hide_window),
             pystray.MenuItem("取消置顶", lambda: unset_window_topmost(self.root)),
             pystray.MenuItem("解除控制", lambda: terminate_process_tree(EXE_NAME)),
             pystray.Menu.SEPARATOR,
@@ -222,16 +194,35 @@ class TrayIcon:
 
 # -------------------- 业务逻辑函数 --------------------
 def set_window_topmost(root_window: tk.Tk) -> None:
-    """设置窗口置顶（增加窗口激活）"""
+    """设置窗口置顶，并启动定时检查确保始终置顶"""
+    def check_topmost():
+        """定时检查窗口是否置顶"""
+        while getattr(root_window, '_keep_topmost', False):  # 检查标志位
+            if not root_window.attributes('-topmost'):
+                root_window.attributes('-topmost', True)  # 重新置顶
+            time.sleep(3)  # 每秒检查一次
+
+    # 设置标志位，表示需要保持置顶
+    root_window._keep_topmost = True
+
+    # 首次置顶
     root_window.deiconify()
     root_window.attributes('-topmost', True)
     update_status("状态：窗口已置顶", STATUS_COLOR["success"])
 
+    # 启动后台线程定时检查
+    threading.Thread(target=check_topmost, daemon=True).start()
+
 def unset_window_topmost(root_window: tk.Tk) -> None:
-    """取消窗口置顶（增加窗口激活）"""
+    """取消窗口置顶，并停止定时检查"""
+    # 清除标志位，停止定时检查
+    if hasattr(root_window, '_keep_topmost'):
+        root_window._keep_topmost = False
+
+    # 取消置顶
     root_window.attributes('-topmost', False)
     try:
-        UnloadTopKey.main()
+        UnloadTopKey.main()  # 取消置顶
         update_status("状态：已取消全部置顶", STATUS_COLOR["success"])
     except Exception as e:
         messagebox.showerror("错误", f"取消置顶失败: {str(e)}")
@@ -323,27 +314,51 @@ def create_gui(root_window: tk.Tk) -> None:
     status_label = tk.Label(root_window, text="状态：就绪")
     status_label.pack(pady=10)
     
-    # 按钮容器
-    button_frame = tk.Frame(root_window)
-    button_frame.pack(pady=10)
+    # 第一行按钮容器
+    button_frame_row1 = tk.Frame(root_window)
+    button_frame_row1.pack()
     
-    # 功能按钮
-    buttons = [
+    # 原功能按钮
+    buttons_row1 = [
         ("开启置顶", lambda: set_window_topmost(root_window)),
         ("开启云控", lambda: launch_application(EXE_PATH)),
         ("解除控制", lambda: terminate_process_tree(EXE_NAME)),
-        ("取消置顶", lambda: unset_window_topmost(root_window)),
+        ("取消置顶", lambda: unset_window_topmost(root_window))
     ]
     
-    # 动态创建按钮
-    for text, command in buttons:
+    # 创建第一行按钮
+    for text, command in buttons_row1:
         btn = tk.Button(
-            button_frame,
+            button_frame_row1,
             text=text,
             command=command,
             width=10
         )
-        btn.pack(side=tk.LEFT, padx=5)
+        btn.pack(side=tk.LEFT, padx=2, pady=2)  # 减小间距
+
+    # 第二行按钮容器（新增）
+    button_frame_row2 = tk.Frame(root_window)
+    button_frame_row2.pack(pady=10)  # 添加垂直间距
+    
+    # 新增功能按钮
+    buttons_row2 = [
+        ("强解 |《上面功能无效再使用》| 高危", lambda: show_max_processes()),
+        # ("清理缓存", lambda: print("执行缓存清理"))
+    ]
+    
+    # 创建第二行按钮（居中显示）
+    for text, command in buttons_row2:
+        btn = tk.Button(
+            button_frame_row2,
+            text=text,
+            command=command,
+            width=30  # 加宽按钮
+        )
+        btn.pack(side=tk.LEFT, padx=20, ipady=3)  # 增加水平间距和垂直内边距
+
+    # 底部留白
+    tk.Frame(root_window, height=10).pack()
+        
 
 # -------------------- 主程序 --------------------
 if __name__ == "__main__":

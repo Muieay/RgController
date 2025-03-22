@@ -73,3 +73,7 @@
 - psutil 进程管理
 - win32gui 窗口控制
 - ctypes 系统级操作
+
+
+> 打包 
+`pyinstaller 小灰灰控制器.spec`
