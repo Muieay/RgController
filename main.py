@@ -294,6 +294,11 @@ def launch_application(exe_path: str) -> None:
     except (FileNotFoundError, PermissionError, subprocess.SubprocessError) as e:
         update_status("状态：启动失败", STATUS_COLOR["error"])
         messagebox.showerror("错误", f"程序启动失败: {str(e)}")
+        
+
+def processes_max() -> None:
+    max_processes()
+    update_status("状态：强解！", STATUS_COLOR["success"])
 
 # -------------------- GUI 相关函数 --------------------
 def update_status(text: str, color: str = STATUS_COLOR["default"]) -> None:
@@ -342,7 +347,7 @@ def create_gui(root_window: tk.Tk) -> None:
     
     # 新增功能按钮
     buttons_row2 = [
-        ("强解 |《上面功能无效再使用》| 高危", lambda: max_processes()),
+        ("强解 |《上面功能无效再使用》| 高危", lambda: processes_max()),
         # ("清理缓存", lambda: print("执行缓存清理"))
     ]
     
