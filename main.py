@@ -8,7 +8,7 @@ import pystray
 from PIL import Image, ImageTk
 import threading
 import time
-from ProcessMax import show_max_processes
+from ProcessMax import max_processes
 
 
 # -------------------- 系统托盘类 --------------------
@@ -342,7 +342,7 @@ def create_gui(root_window: tk.Tk) -> None:
     
     # 新增功能按钮
     buttons_row2 = [
-        ("强解 |《上面功能无效再使用》| 高危", lambda: show_max_processes()),
+        ("强解 |《上面功能无效再使用》| 高危", lambda: max_processes()),
         # ("清理缓存", lambda: print("执行缓存清理"))
     ]
     
