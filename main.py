@@ -67,25 +67,25 @@ class TrayIcon:
         # 路径配置
         tk.Label(config_win, text="EXE路径:").grid(row=0, column=0, padx=5, pady=5)
         path_entry = tk.Entry(config_win, width=40)
-        path_entry.insert(0, EXE_PATH)
+        path_entry.insert(0, ';'.join(EXE_PATH))
         path_entry.grid(row=0, column=1, padx=5, pady=5)
 
         # 名称配置
         tk.Label(config_win, text="进程名称:").grid(row=1, column=0, padx=5, pady=5)
         name_entry = tk.Entry(config_win, width=40)
-        name_entry.insert(0, ", ".join(EXE_NAME))
+        name_entry.insert(0, "; ".join(EXE_NAME))
         name_entry.grid(row=1, column=1, padx=5, pady=5)
 
         def save_config():
             """保存配置到全局变量"""
             global EXE_PATH, EXE_NAME
-            EXE_PATH = path_entry.get()
+            EXE_PATH = [p.strip() for p in path_entry.get().split(';') if p.strip()]
             # 从输入框获取字符串并转换为列表
             names_str = name_entry.get()
-            EXE_NAME = [name.strip() for name in names_str.split(",") if name.strip()]
+            EXE_NAME = [name.strip() for name in names_str.split(";") if name.strip()]
             config_win.destroy()
             messagebox.showinfo("保存成功", 
-                "配置已更新！\n新路径: {}\n新名称: {}".format(EXE_PATH, ", ".join(EXE_NAME)))
+                "配置已更新！\n新路径: {}\n新名称: {}".format(EXE_PATH, "; ".join(EXE_NAME)))
 
         # 操作按钮
         btn_frame = tk.Frame(config_win)
@@ -200,7 +200,7 @@ def set_window_topmost(root_window: tk.Tk) -> None:
         while getattr(root_window, '_keep_topmost', False):  # 检查标志位
             if not root_window.attributes('-topmost'):
                 root_window.attributes('-topmost', True)  # 重新置顶
-            time.sleep(3)  # 每秒检查一次
+            time.sleep(1)  # 每秒检查一次
 
     # 设置标志位，表示需要保持置顶
     root_window._keep_topmost = True
@@ -278,7 +278,7 @@ def terminate_process_tree(process_names: list[str]) -> None:
     else:
         update_status("状态：未找到进程", STATUS_COLOR["error"])
 
-def launch_application(exe_path: str) -> None:
+def launch_application(exe_paths: list[str]) -> None:
     """
     启动指定路径的应用程序
     
@@ -288,13 +288,18 @@ def launch_application(exe_path: str) -> None:
     Raises:
         subprocess.SubprocessError: 启动进程失败时抛出
     """
-    try:
-        subprocess.Popen(exe_path)
-        update_status("状态：开启云控", STATUS_COLOR["success"])
-    except (FileNotFoundError, PermissionError, subprocess.SubprocessError) as e:
-        update_status("状态：启动失败", STATUS_COLOR["error"])
-        messagebox.showerror("错误", f"程序启动失败: {str(e)}")
-        
+    success = False
+    for path in exe_paths:
+        try:
+            subprocess.Popen(path)
+            success = True
+        except (FileNotFoundError, PermissionError, subprocess.SubprocessError) as e:
+            print(f"启动失败: {str(e)}")
+    if success:
+        update_status("状态：云控已启动", STATUS_COLOR["success"])
+    else:
+        update_status(f"启动失败: {os.path.basename(path)}", STATUS_COLOR["error"])
+        messagebox.showerror("错误", f"未找到指定程序，请手动配置！")
 
 def processes_max() -> None:
     max_processes()
@@ -347,7 +352,7 @@ def create_gui(root_window: tk.Tk) -> None:
     
     # 新增功能按钮
     buttons_row2 = [
-        ("强解 |《上面功能无效再使用》| 高危", lambda: processes_max()),
+        ("强解 |《解控无效再使用》| 高危", lambda: processes_max()),
         # ("清理缓存", lambda: print("执行缓存清理"))
     ]
     

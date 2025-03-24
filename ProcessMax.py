@@ -35,16 +35,16 @@ def is_system_process(proc):
     """判断是否为系统关键进程"""
     try:
         # 系统特征判断条件
-        system_users = {
-            'NT AUTHORITY\\SYSTEM',
-            'NT AUTHORITY\\LOCAL SERVICE',
-            'NT AUTHORITY\\NETWORK SERVICE'
-        }
-        system_dirs = (
-            r'C:\Windows\System32',
-            r'C:\Windows\SysWOW64',
-            r'C:\Windows\WinSxS'
-        )
+        # system_users = {
+        #     'NT AUTHORITY\\SYSTEM',
+        #     'NT AUTHORITY\\LOCAL SERVICE',
+        #     'NT AUTHORITY\\NETWORK SERVICE'
+        # }
+        # system_dirs = (
+        #     r'C:\Windows\System32',
+        #     r'C:\Windows\SysWOW64',
+        #     r'C:\Windows\WinSxS'
+        # )
         
         # 获取进程信息
         username = proc.username()
@@ -53,8 +53,8 @@ def is_system_process(proc):
         
         # 判断条件
         if any([
-            username in system_users,
-            exe_path.startswith(system_dirs),
+            # username in system_users,
+            # exe_path.startswith(system_dirs),
             ppid == 4,  # System process
             proc.pid == 4,  # System Idle Process
             proc.pid == 0,  # System process

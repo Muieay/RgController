@@ -8,8 +8,55 @@ def resource_path(relative_path):
     return os.path.join(os.path.abspath("."), relative_path)
 
 # -------------------- 常量定义 --------------------
-EXE_PATH = r"C:\Program Files (x86)\RG-CloudManagerRemote\CMLauncher.exe"
-EXE_NAME = ["CMLauncher.exe","student.exe"]
+EXE_PATH = [
+    r"C:\Program Files (x86)\RG-CloudManagerRemote\CMLauncher.exe",
+    r"C:\Program Files (x86)\Mythware\极域课堂管理系统软件V6.0 2016 豪华版\StudentMain.exe",
+    r"C:\Parasaga\cyberclass\student\Student.exe",
+    r"C:\Program Files (x86)\Parasaga\cyberclass\student\Student.exe",
+    r"C:\Program Files (x86)\3000soft\Red Spider\REDAgent.exe"
+]
+EXE_NAME = [
+    "CMLauncher.exe", 
+    "CMApp.exe",
+    "CMService.exe",
+    "CMUninstaller.exe",
+    "CMUpgrader.exe",
+    "REDAgent.exe",
+    "repview.exe",
+    "PerformanceCheck.exe",
+    "FormatPaper.exe",
+    "edpaper.exe",
+    "Adapter.exe",
+    "student.exe", 
+    "GtSRun.exe", 
+    "lxboard.exe", 
+    "msboard.exe", 
+    "MTCPerformance.exe", 
+    "PsDeskContral.exe", 
+    "PsFileLoad.exe", 
+    "PsGhost.exe", 
+    "PSSound.exe", 
+    "PSSoundBig.exe", 
+    "secprocess.exe", 
+    "SECCService.exe", 
+    "SendInfoClient.exe", 
+    "SetFirewall.exe", 
+    "Student.exe", 
+    "TSTalk.exe", 
+    "VideoClient.exe", 
+    "whiteboard.exe", 
+    "编号工具.exe", 
+    "远程协助.exe",
+    "GATESRV.exe",
+    "InstHelpApp.exe",
+    "InstHelpApp64.exe",
+    "MasterHelper.exe",
+    "ProcHelper64.exe",
+    "Shutdown.exe",
+    "SpecialSet.exe",
+    "StudentMain.exe",
+    "TDChalk.exe"
+]
 WINDOW_TITLE = "小灰灰控制器"
 WINDOW_GEOMETRY = "350x150"
 ICON_PATH = resource_path("htl.ico")
