@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 import threading
 import time
 from ProcessMax import max_processes
-
+import keyboard
 
 # -------------------- 系统托盘类 --------------------
 class TrayIcon:
@@ -193,6 +193,53 @@ class TrayIcon:
         close_btn.pack(pady=(20, 0))
 
 # -------------------- 业务逻辑函数 --------------------
+monitoring = False
+monitor_lock = threading.Lock()
+monitor_process_names = []
+
+
+def start_monitoring(process_names: list[str]) -> None:
+    """启动监控线程"""
+    global monitoring, monitor_process_names
+    with monitor_lock:
+        if not monitoring:
+            monitoring = True
+            monitor_process_names = process_names.copy()
+            monitor_thread = threading.Thread(target=monitor_processes, daemon=True)
+            monitor_thread.start()
+
+def stop_monitoring() -> None:
+    """停止监控线程"""
+    global monitoring
+    with monitor_lock:
+        monitoring = False
+
+def monitor_processes() -> None:
+    """持续监控进程列表"""
+    while True:
+        # 获取当前监控列表的副本
+        with monitor_lock:
+            if not monitoring:
+                break  # 停止监控
+            current_monitor_list = monitor_process_names.copy()
+        
+        # 检查进程是否存在
+        found = False
+        for proc in psutil.process_iter(['name']):
+            try:
+                if proc.info['name'] in current_monitor_list:
+                    found = True
+                    break
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+        
+        # 如果发现进程则立即终止
+        if found:
+            terminate_process_tree(current_monitor_list)
+        
+        # 降低CPU占用
+        time.sleep(1)
+
 def set_window_topmost(root_window: tk.Tk) -> None:
     """设置窗口置顶，并启动定时检查确保始终置顶"""
     def check_topmost():
@@ -234,40 +281,30 @@ def terminate_process_tree(process_names: list[str]) -> None:
     """
     改进版进程终止函数（支持父子服务依赖关系）
     终止顺序：孙进程 → 子进程 → 父进程
-    :param process_names: 需要终止的进程名称列表
     """
     found = False
-    
     def recursive_kill(process):
-        """递归终止子进程"""
         try:
-            # 获取直接子进程（非递归获取）
-            children = process.children()
-            for child in children:
-                recursive_kill(child)  # 先处理子进程的子进程
+            for child in process.children():
+                recursive_kill(child)
                 try:
                     child.kill()
-                    child.wait(timeout=3)  # 等待进程终止
+                    child.wait(timeout=3)
                 except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.TimeoutExpired):
                     pass
         except psutil.NoSuchProcess:
-            return
+            pass
 
     for proc in psutil.process_iter(['name', 'pid']):
         try:
             if proc.info['name'] in process_names:
-                target_process = psutil.Process(proc.info['pid'])  # 重命名变量更准确
-                
-                # 先递归终止所有子进程
+                target_process = psutil.Process(proc.info['pid'])
                 recursive_kill(target_process)
-                
-                # 最后终止目标进程
                 try:
                     target_process.kill()
-                    target_process.wait(timeout=3)  # 等待进程终止
+                    target_process.wait(timeout=3)
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
-                
                 found = True
         except (psutil.NoSuchProcess, psutil.AccessDenied) as e:
             print(f"进程操作异常: {str(e)}")
@@ -275,6 +312,7 @@ def terminate_process_tree(process_names: list[str]) -> None:
 
     if found:
         update_status("状态：云控解除", STATUS_COLOR["success"])
+        start_monitoring(process_names)  # 启动监控
     else:
         update_status("状态：未找到进程", STATUS_COLOR["error"])
 
@@ -289,6 +327,7 @@ def launch_application(exe_paths: list[str]) -> None:
         subprocess.SubprocessError: 启动进程失败时抛出
     """
     success = False
+    stop_monitoring() # 停止监控
     for path in exe_paths:
         try:
             subprocess.Popen(path)
@@ -370,6 +409,9 @@ def create_gui(root_window: tk.Tk) -> None:
     tk.Frame(root_window, height=10).pack()
         
 
+
+# -------------------- 快捷键 --------------------
+
 # -------------------- 主程序 --------------------
 if __name__ == "__main__":
     root = tk.Tk()
@@ -379,5 +421,22 @@ if __name__ == "__main__":
     global Tray
     Tray = TrayIcon(root)
     Tray.run_in_thread()
+    
+    # 添加全局快捷键监听
+    try:
+        # 显示窗口快捷键 Ctrl+Alt+W
+        keyboard.add_hotkey(
+            'ctrl+alt+w',
+            lambda: root.after(0, Tray.show_window)
+        )
+        # 解除控制快捷键 Ctrl+Alt+E
+        keyboard.add_hotkey(
+            'ctrl+alt+e',
+            lambda: root.after(0, terminate_process_tree, EXE_NAME)
+        )
+    except ImportError:
+        print("警告：未安装keyboard模块，快捷键功能不可用")
+    except Exception as e:
+        print(f"快捷键注册失败: {str(e)}")
     
     root.mainloop()

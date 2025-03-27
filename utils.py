@@ -42,6 +42,7 @@ EXE_NAME = [
     "SendInfoClient.exe", 
     "SetFirewall.exe", 
     "Student.exe", 
+    "QuickWord.exe",
     "TSTalk.exe", 
     "VideoClient.exe", 
     "whiteboard.exe", 
